@@ -1,5 +1,3 @@
-// utils/HttpClient.ts
-
 import { request as httpRequest, RequestOptions } from "http";
 import { request as httpsRequest } from "https";
 import { URL } from "url";
@@ -7,28 +5,25 @@ import { AuthOptions } from "../interfaces/SchemaRegistryOptions";
 import { createAuthHeader } from "./AuthUtils";
 import { SchemaRegistryError } from "../errors/SchemaRegistryError";
 
+// Make HttpClient more flexible with generics
 export class HttpClient {
   private baseUrl: string;
   private authOptions?: AuthOptions;
   private timeout: number;
 
-  constructor(
-    baseUrl: string,
-    authOptions?: AuthOptions,
-    timeout: number = 5000
-  ) {
+  constructor(baseUrl: string, authOptions?: AuthOptions, timeout: number = 5000) {
     this.baseUrl = baseUrl;
     this.authOptions = authOptions;
     this.timeout = timeout;
   }
 
-  async request(
-    method: "GET" | "POST",
+  async request<T>(
+    method: "GET" | "POST" | "DELETE" | "PUT" ,
     path: string,
     body?: string,
     headers: Record<string, string> = {}
-  ): Promise<{ statusCode: number; body: string }> {
-    return new Promise((resolve, reject) => {
+  ): Promise<T> {
+    try {
       const url = new URL(path, this.baseUrl);
       const isHttps = url.protocol === "https:";
       const requestOptions: RequestOptions = {
@@ -48,35 +43,31 @@ export class HttpClient {
         requestOptions.headers!["Authorization"] = authHeader;
       }
 
-      const req = (isHttps ? httpsRequest : httpRequest)(
-        requestOptions,
-        (res) => {
-          let responseData = "";
+      const req = (isHttps ? httpsRequest : httpRequest)(requestOptions, (res) => {
+        let responseData = "";
+        res.setEncoding("utf-8");
 
-          res.setEncoding("utf-8");
+        res.on("data", (chunk) => {
+          responseData += chunk;
+        });
 
-          res.on("data", (chunk) => {
-            responseData += chunk;
-          });
-
-          res.on("end", () => {
-            if (
-              res.statusCode &&
-              res.statusCode >= 200 &&
-              res.statusCode < 300
-            ) {
-              resolve({ statusCode: res.statusCode, body: responseData });
-            } else {
-              const error = new SchemaRegistryError(
-                `HTTP ${res.statusCode}: ${res.statusMessage}`,
-                res.statusCode
-              );
-              (error as any).responseBody = responseData;
-              reject(error);
+        res.on("end", () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              resolve(JSON.parse(responseData) as T);
+            } catch (parseError) {
+              reject(new SchemaRegistryError("Failed to parse response", res.statusCode));
             }
-          });
-        }
-      );
+          } else {
+            const error = new SchemaRegistryError(
+              `HTTP ${res.statusCode}: ${res.statusMessage}`,
+              res.statusCode
+            );
+            (error as any).responseBody = responseData;
+            reject(error);
+          }
+        });
+      });
 
       req.on("error", (err) => {
         reject(new SchemaRegistryError(`Network error: ${err.message}`));
@@ -92,6 +83,8 @@ export class HttpClient {
       }
 
       req.end();
-    });
+    } catch (error) {
+      throw new SchemaRegistryError(`Unexpected error: ${error.message}`);
+    }
   }
 }

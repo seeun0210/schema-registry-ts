@@ -1,5 +1,3 @@
-// utils/ResponseParser.ts
-
 export function parseHttpResponse(response: string): {
   statusCode: number;
   body: string;

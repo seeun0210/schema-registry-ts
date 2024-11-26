@@ -1,5 +1,3 @@
-// utils/AuthUtils.ts
-
 import { AuthOptions } from "../interfaces/SchemaRegistryOptions";
 
 export function createAuthHeader(authOptions?: AuthOptions): string | null {

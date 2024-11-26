@@ -1,5 +1,3 @@
-// cache/SchemaCache.ts
-
 export class SchemaCache {
   private cache: Map<number, object> = new Map();
 
