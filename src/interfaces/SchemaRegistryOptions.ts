@@ -2,6 +2,7 @@ export interface AuthOptions {
   username?: string;
   password?: string;
   token?: string;
+  apiKey?: string;  
 }
 
 export interface SchemaRegistryOptions {

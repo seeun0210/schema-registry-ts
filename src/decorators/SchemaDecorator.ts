@@ -1,5 +1,3 @@
-// decorators/SchemaDecorator.ts
-
 import "reflect-metadata";
 import { SchemaType } from "../interfaces/SchemaType";
 

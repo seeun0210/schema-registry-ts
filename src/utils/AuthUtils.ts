@@ -9,7 +9,10 @@ export function createAuthHeader(authOptions?: AuthOptions): string | null {
     return `Basic ${encoded}`;
   } else if (authOptions.token) {
     return `Bearer ${authOptions.token}`;
+  } else if (authOptions.apiKey) {
+    return `ApiKey ${authOptions.apiKey}`;
   }
 
   return null;
 }
+
